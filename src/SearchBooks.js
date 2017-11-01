@@ -5,6 +5,7 @@ import {
 } from 'react-router-dom';
 import Book from './Book';
 import * as BooksAPI from './BooksAPI';
+import {debounce} from 'throttle-debounce';
 
 
 class SearchBooks extends Component {
@@ -14,9 +15,17 @@ class SearchBooks extends Component {
     };
 
     state = {
-        books: [],
-        query: ''
+        books: []
     };
+
+    constructor() {
+        super();
+        this.doSearch = debounce(400, this.searchBooks);
+    }
+
+    componentDidMount() {
+        this.searchInput.focus();
+    }
 
     setBooks(books) {
         this.setState({
@@ -33,11 +42,7 @@ class SearchBooks extends Component {
     }
 
     searchBooks = (query) => {
-        this.setState({
-            query: query
-        });
-
-        if (query.trim() !== '' && this.state.query.trim() !== query.trim()) {
+        if (query.trim() !== '') {
             BooksAPI.search(query.trim()).then(response => {
                 if (response.error) {
                     this.clearBooksList();
@@ -84,8 +89,10 @@ class SearchBooks extends Component {
                     <div className="search-books-input-wrapper">
                         <input type="text"
                                placeholder="Search by title or author"
-                               value={this.state.query}
-                               onChange={(event) => this.searchBooks(event.target.value)}/>
+                               ref={(input) => {
+                                   this.searchInput = input;
+                               }}
+                               onChange={(event) => this.doSearch(event.target.value)}/>
                     </div>
                 </div>
                 <div className="search-books-results">
