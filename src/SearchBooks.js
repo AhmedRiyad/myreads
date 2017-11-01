@@ -9,22 +9,67 @@ import * as BooksAPI from './BooksAPI';
 
 class SearchBooks extends Component {
     static propTypes = {
-        books: PropTypes.array.isRequired,
+        booksOnShelf: PropTypes.array.isRequired,
         onBookShelfChange: PropTypes.func
     };
 
     state = {
-        books: []
+        books: [],
+        query: ''
     };
 
-    searchBooks = (query) => {
-        BooksAPI.search(query).then((books) => {
-            if (Array.isArray(books)) {
-                this.setState({books});
-            } else {
-                this.setState({books: []});
-            }
+    setBooks(books) {
+        this.setState({
+            books: books.map(book => {
+                book.shelf = "none";
+                this.props.booksOnShelf.forEach(({id, shelf}) => {
+                    if (book.id === id) {
+                        book.shelf = shelf;
+                    }
+                });
+                return book;
+            })
         });
+    }
+
+    searchBooks = (query) => {
+        this.setState({
+            query: query
+        });
+
+        if (query.trim() !== '' && this.state.query.trim() !== query.trim()) {
+            BooksAPI.search(query.trim()).then(response => {
+                if (response.error) {
+                    this.clearBooksList();
+                    console.log(response.error);
+                } else {
+                    this.setBooks(response);
+                }
+            }).catch((error) => {
+                this.clearBooksList();
+                console.log(error);
+            });
+        } else if (query.trim() === '') {
+            this.clearBooksList();
+        }
+    };
+
+    clearBooksList() {
+        this.setState({
+            books: []
+        });
+    }
+
+    onBookShelfChange = (book, shelf) => {
+        this.setState({
+            books: this.state.books.map((b) => {
+                if (b.id === book.id) {
+                    b.shelf = shelf;
+                }
+                return b;
+            })
+        });
+        this.props.onBookShelfChange(book, shelf);
     };
 
     render() {
@@ -39,6 +84,7 @@ class SearchBooks extends Component {
                     <div className="search-books-input-wrapper">
                         <input type="text"
                                placeholder="Search by title or author"
+                               value={this.state.query}
                                onChange={(event) => this.searchBooks(event.target.value)}/>
                     </div>
                 </div>
@@ -47,7 +93,7 @@ class SearchBooks extends Component {
                         {this.state.books.map((book) => (
                             <li key={book.id}>
                                 <Book book={book}
-                                      onBookShelfChange={this.props.onBookShelfChange}/>
+                                      onBookShelfChange={this.onBookShelfChange}/>
                             </li>
                         ))}
                     </ol>
